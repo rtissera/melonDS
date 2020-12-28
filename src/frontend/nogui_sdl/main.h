@@ -19,13 +19,14 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-class EmuThread : public QThread
+#include <string>
+
+class EmuThread
 {
-    Q_OBJECT
     void run() override;
 
 public:
-    explicit EmuThread(QObject* parent = nullptr);
+    explicit EmuThread(void* parent = nullptr);
 
     void initOpenGL();
     void deinitOpenGL();
@@ -44,7 +45,7 @@ public:
 
 signals:
     void windowUpdate();
-    void windowTitleChange(QString title);
+    void windowTitleChange(std::string title);
 
     void windowEmuStart();
     void windowEmuStop();
@@ -54,7 +55,7 @@ signals:
     void windowLimitFPSChange();
 
     void screenLayoutChange();
-    
+
     void windowFullscreenToggle();
 
 private:
@@ -63,14 +64,13 @@ private:
     int EmuRunning;
     int EmuPause;
 
-    QOffscreenSurface* oglSurface;
-    QOpenGLContext* oglContext;
+    SDL_Surface* oglSurface;
+    SDL_GLContext* oglContext;
 };
 
 
 class ScreenHandler
 {
-    Q_GADGET
 
 public:
     virtual ~ScreenHandler() {}
@@ -78,11 +78,11 @@ public:
 protected:
     void screenSetupLayout(int w, int h);
 
-    QSize screenGetMinSize();
+    SDL_Rect screenGetMinSize();
 
-    void screenOnMousePress(QMouseEvent* event);
-    void screenOnMouseRelease(QMouseEvent* event);
-    void screenOnMouseMove(QMouseEvent* event);
+    void screenOnMousePress(SDL_MouseEvent* event);
+    void screenOnMouseRelease(SDL_MouseEvent* event);
+    void screenOnMouseMove(SDL_MouseEvent* event);
 
     float screenMatrix[2][6];
 
@@ -90,22 +90,21 @@ protected:
 };
 
 
-class ScreenPanelNative : public QWidget, public ScreenHandler
+class ScreenPanelNative : public ScreenHandler
 {
-    Q_OBJECT
 
 public:
-    explicit ScreenPanelNative(QWidget* parent);
+    explicit ScreenPanelNative(void* parent);
     ~ScreenPanelNative();
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
+    void paintEvent(SDL_Event* event) override;
 
-    void resizeEvent(QResizeEvent* event) override;
+    void resizeEvent(SDL_Event* event) override;
 
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
+    void mousePressEvent(SDL_MouseEvent* event) override;
+    void mouseReleaseEvent(SDL_MouseEvent* event) override;
+    void mouseMoveEvent(SDL_MouseEvent* event) override;
 
 private slots:
     void onScreenLayoutChanged();
@@ -113,17 +112,16 @@ private slots:
 private:
     void setupScreenLayout();
 
-    QImage screen[2];
-    QTransform screenTrans[2];
+    SDL_Texture screen[2];
+    //QTransform screenTrans[2];
 };
 
 
-class ScreenPanelGL : public QOpenGLWidget, public ScreenHandler, protected QOpenGLFunctions_3_2_Core
+class ScreenPanelGL : public ScreenHandler //, protected QOpenGLFunctions_3_2_Core
 {
-    Q_OBJECT
 
 public:
-    explicit ScreenPanelGL(QWidget* parent);
+    explicit ScreenPanelGL(void* parent);
     ~ScreenPanelGL();
 
 protected:
@@ -131,12 +129,12 @@ protected:
 
     void paintGL() override;
 
-    void resizeEvent(QResizeEvent* event) override;
+    void resizeEvent(SDL_Event* event) override;
     void resizeGL(int w, int h) override;
 
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
+    void mousePressEvent(SDL_MouseEvent* event) override;
+    void mouseReleaseEvent(SDL_MouseEvent* event) override;
+    void mouseMoveEvent(SDL_MouseEvent* event) override;
 
 private slots:
     void onScreenLayoutChanged();
@@ -144,37 +142,36 @@ private slots:
 private:
     void setupScreenLayout();
 
-    QOpenGLShaderProgram* screenShader;
+    //QOpenGLShaderProgram* screenShader;
     GLuint screenVertexBuffer;
     GLuint screenVertexArray;
     GLuint screenTexture;
 };
 
 
-class MainWindow : public QMainWindow
+class MainWindow
 {
-    Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget* parent = nullptr);
+    explicit MainWindow(void* parent = nullptr);
     ~MainWindow();
 
     bool hasOGL;
-    QOpenGLContext* getOGLContext();
+    SDL_GLContext* getOGLContext();
 
 protected:
-    void resizeEvent(QResizeEvent* event) override;
+    void resizeEvent(SDL_Event* event) override;
 
-    void keyPressEvent(QKeyEvent* event) override;
-    void keyReleaseEvent(QKeyEvent* event) override;
+    void keyPressEvent(SDL_KeyEvent* event) override;
+    void keyReleaseEvent(SDL_KeyEvent* event) override;
 
-    void dragEnterEvent(QDragEnterEvent* event) override;
-    void dropEvent(QDropEvent* event) override;
+    void dragEnterEvent(SDL_Event* event) override;
+    void dropEvent(SDL_Event* event) override;
 
-signals:
+//signals:
     void screenLayoutChange();
 
-private slots:
+private: //slots:
     void onOpenFile();
     void onBootFirmware();
     void onSaveState();
@@ -217,16 +214,16 @@ private slots:
     void onEmuStop();
 
     void onUpdateVideoSettings(bool glchange);
-    
+
     void onFullscreenToggled();
 
 private:
     void createScreenPanel();
 
-    QString loadErrorStr(int error);
+    std::string loadErrorStr(int error);
 
 public:
-    QWidget* panel;
+    /*QWidget* panel;
 
     QAction* actOpenROM;
     QAction* actBootFirmware;
@@ -261,7 +258,7 @@ public:
     QAction* actScreenFiltering;
     QAction* actShowOSD;
     QAction* actLimitFramerate;
-    QAction* actAudioSync;
+    QAction* actAudioSync;*/
 };
 
 #endif // MAIN_H
