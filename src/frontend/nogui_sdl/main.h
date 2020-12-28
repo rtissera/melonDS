@@ -43,7 +43,7 @@ public:
 
     bool emuIsRunning();
 
-signals:
+//signals:
     void windowUpdate();
     void windowTitleChange(std::string title);
 
@@ -106,7 +106,7 @@ protected:
     void mouseReleaseEvent(SDL_MouseEvent* event) override;
     void mouseMoveEvent(SDL_MouseEvent* event) override;
 
-private slots:
+private: // slots:
     void onScreenLayoutChanged();
 
 private:

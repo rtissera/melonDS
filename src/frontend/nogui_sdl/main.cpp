@@ -247,8 +247,6 @@ EmuThread::EmuThread(QObject* parent) : QThread(parent)
 
     connect(this, SIGNAL(windowUpdate()), mainWindow->panel, SLOT(update()));
     connect(this, SIGNAL(windowTitleChange(QString)), mainWindow, SLOT(onTitleUpdate(QString)));
-    connect(this, SIGNAL(windowEmuStart()), mainWindow, SLOT(onEmuStart()));
-    connect(this, SIGNAL(windowEmuStop()), mainWindow, SLOT(onEmuStop()));
     connect(this, SIGNAL(windowEmuPause()), mainWindow->actPause, SLOT(trigger()));
     connect(this, SIGNAL(windowEmuReset()), mainWindow->actReset, SLOT(trigger()));
     connect(this, SIGNAL(windowLimitFPSChange()), mainWindow->actLimitFramerate, SLOT(trigger()));
@@ -553,7 +551,7 @@ void EmuThread::run()
 
 void EmuThread::changeWindowTitle(char* title)
 {
-    emit windowTitleChange(QString(title));
+    printf("melonDS: window title set to %s\n", title);
 }
 
 void EmuThread::emuRun()
@@ -563,7 +561,6 @@ void EmuThread::emuRun()
     RunningSomething = true;
 
     // checkme
-    emit windowEmuStart();
     if (audioDevice) SDL_PauseAudioDevice(audioDevice, 0);
     if (micDevice)   SDL_PauseAudioDevice(micDevice, 0);
 }
@@ -1624,15 +1621,11 @@ void MainWindow::onImportSavefile()
 
     if (!path.isEmpty())
     {
-        if (QMessageBox::warning(this,
-                        "Emulation will be reset and data overwritten",
-                        "The emulation will be reset and the current savefile overwritten.",
-                        QMessageBox::Ok, QMessageBox::Cancel) == QMessageBox::Ok)
         {
             int res = Frontend::Reset();
             if (res != Frontend::Load_OK)
             {
-                QMessageBox::critical(this, "melonDS", "Reset failed\n" + loadErrorStr(res));
+                printf("melonDS: Reset failed %s\n", loadErrorStr(res));
             }
             else
             {
@@ -1649,7 +1642,7 @@ void MainWindow::onImportSavefile()
 
 void MainWindow::onQuit()
 {
-    QApplication::quit();
+    exit(0);
 }
 
 
@@ -1709,9 +1702,6 @@ void MainWindow::onEnableCheats(bool checked)
 void MainWindow::onSetupCheats()
 {
     emuThread->emuPause();
-
-    CheatsDialog* dlg = CheatsDialog::openDlg(this);
-    connect(dlg, &CheatsDialog::finished, this, &MainWindow::onCheatsDialogFinished);
 }
 
 void MainWindow::onCheatsDialogFinished(int res)
@@ -1723,9 +1713,6 @@ void MainWindow::onCheatsDialogFinished(int res)
 void MainWindow::onOpenEmuSettings()
 {
     emuThread->emuPause();
-
-    EmuSettingsDialog* dlg = EmuSettingsDialog::openDlg(this);
-    connect(dlg, &EmuSettingsDialog::finished, this, &MainWindow::onEmuSettingsDialogFinished);
 }
 
 void MainWindow::onEmuSettingsDialogFinished(int res)
@@ -1739,9 +1726,6 @@ void MainWindow::onEmuSettingsDialogFinished(int res)
 void MainWindow::onOpenInputConfig()
 {
     emuThread->emuPause();
-
-    InputConfigDialog* dlg = InputConfigDialog::openDlg(this);
-    connect(dlg, &InputConfigDialog::finished, this, &MainWindow::onInputConfigFinished);
 }
 
 void MainWindow::onInputConfigFinished(int res)
@@ -1751,14 +1735,10 @@ void MainWindow::onInputConfigFinished(int res)
 
 void MainWindow::onOpenVideoSettings()
 {
-    VideoSettingsDialog* dlg = VideoSettingsDialog::openDlg(this);
-    connect(dlg, &VideoSettingsDialog::updateVideoSettings, this, &MainWindow::onUpdateVideoSettings);
 }
 
 void MainWindow::onOpenAudioSettings()
 {
-    AudioSettingsDialog* dlg = AudioSettingsDialog::openDlg(this);
-    connect(dlg, &AudioSettingsDialog::finished, this, &MainWindow::onAudioSettingsFinished);
 }
 
 void MainWindow::onAudioSettingsFinished(int res)
@@ -1783,9 +1763,6 @@ void MainWindow::onAudioSettingsFinished(int res)
 void MainWindow::onOpenWifiSettings()
 {
     emuThread->emuPause();
-
-    WifiSettingsDialog* dlg = WifiSettingsDialog::openDlg(this);
-    connect(dlg, &WifiSettingsDialog::finished, this, &MainWindow::onWifiSettingsFinished);
 }
 
 void MainWindow::onWifiSettingsFinished(int res)
@@ -1926,54 +1903,11 @@ void MainWindow::onFullscreenToggled()
 
 void MainWindow::onEmuStart()
 {
-    // TODO: make savestates work in DSi mode!!
-    if (Config::ConsoleType == 1)
-    {
-        for (int i = 0; i < 9; i++)
-        {
-            actSaveState[i]->setEnabled(false);
-            actLoadState[i]->setEnabled(false);
-        }
-        actUndoStateLoad->setEnabled(false);
-    }
-    else
-    {
-        for (int i = 1; i < 9; i++)
-        {
-            actSaveState[i]->setEnabled(true);
-            actLoadState[i]->setEnabled(Frontend::SavestateExists(i));
-        }
-        actSaveState[0]->setEnabled(true);
-        actLoadState[0]->setEnabled(true);
-        actUndoStateLoad->setEnabled(false);
-    }
-
-    actPause->setEnabled(true);
-    actPause->setChecked(false);
-    actReset->setEnabled(true);
-    actStop->setEnabled(true);
-    actImportSavefile->setEnabled(true);
-
-    actSetupCheats->setEnabled(true);
 }
 
 void MainWindow::onEmuStop()
 {
     emuThread->emuPause();
-
-    for (int i = 0; i < 9; i++)
-    {
-        actSaveState[i]->setEnabled(false);
-        actLoadState[i]->setEnabled(false);
-    }
-    actUndoStateLoad->setEnabled(false);
-    actImportSavefile->setEnabled(false);
-
-    actPause->setEnabled(false);
-    actReset->setEnabled(false);
-    actStop->setEnabled(false);
-
-    actSetupCheats->setEnabled(false);
 }
 
 void MainWindow::onUpdateVideoSettings(bool glchange)
@@ -2019,9 +1953,6 @@ int main(int argc, char** argv)
 
     Platform::Init(argc, argv);
 
-    QApplication melon(argc, argv);
-    melon.setWindowIcon(QIcon(":/melon-icon"));
-
     // http://stackoverflow.com/questions/14543333/joystick-wont-work-using-sdl
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 
@@ -2031,7 +1962,7 @@ int main(int argc, char** argv)
     }
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
     {
-        QMessageBox::critical(NULL, "melonDS", "SDL shat itself :(");
+        printf("melonDS: SDL shat itself :(");
         return 1;
     }
 
